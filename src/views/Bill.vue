@@ -1217,7 +1217,6 @@ function nextYear() {
   .copy-text { display:none }
 }
 
-<style scoped>
 /* 添加滚动容器样式 */
 .bill-list-container {
   overflow-y: auto;
