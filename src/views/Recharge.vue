@@ -1,163 +1,174 @@
 <template>
   <div class="recharge-page">
-    <div class="content">
-      <!-- 充值卡片 -->
-      <section class="recharge-card">
-        <div class="card-header">
-        <div class="card-header-left">
-            <h2 class="card-title">USDT 充值</h2>
-        </div>
-        
-        <!-- 账单按钮 -->
-        <button class="bill-button" @click="$router.push('/me')" title="查看账单" aria-label="查看账单">
-            <svg class="bill-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15V5a2 2 0 0 0-2-2H7L3 6v11a2 2 0 0 0 2 2h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 充值卡片 -->
+    <section class="recharge-card">
+    <div class="card-header">
+    <div class="card-header-left">
+        <h2 class="card-title">USDT 充值</h2>
+    </div>
+    
+    <!-- 账单按钮 -->
+    <button class="bill-button" @click="$router.push('/bill')" title="查看账单" aria-label="查看账单">
+        <svg class="bill-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15V5a2 2 0 0 0-2-2H7L3 6v11a2 2 0 0 0 2 2h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="bill-text">账单</span>
+    </button>
+    </div>
+    
+    <!-- 币种信息 -->
+    <div class="currency-info">
+        <div class="info-item">
+        <span class="info-label">币种</span>
+        <div class="info-content">
+            <div class="currency-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="#26A17B" stroke-width="1.2"/>
+                <path d="M12 6V18M8 9H12M8 15H12M16 9H12M16 15H12" stroke="#26A17B" stroke-width="1.2" stroke-linecap="round"/>
             </svg>
-            <span class="bill-text">账单</span>
-        </button>
+            <span class="currency-name">USDT</span>
+            </div>
+        </div>
         </div>
         
-        <!-- 币种信息 -->
-        <div class="currency-info">
-          <div class="info-item">
-            <span class="info-label">币种</span>
-            <div class="info-content">
-              <div class="currency-badge">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="9" stroke="#26A17B" stroke-width="1.2"/>
-                  <path d="M12 6V18M8 9H12M8 15H12M16 9H12M16 15H12" stroke="#26A17B" stroke-width="1.2" stroke-linecap="round"/>
-                </svg>
-                <span class="currency-name">USDT</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">网络</span>
-            <div class="info-content">
-              <span class="network-badge">TRC20</span>
-            </div>
-          </div>
+        <div class="info-item">
+        <span class="info-label">网络</span>
+        <div class="info-content">
+            <span class="network-badge">TRC20</span>
+        </div>
+        </div>
 
-          <!-- 地址部分 - 与币种、网络相同的风格 -->
-          <div class="info-item">
-            <span class="info-label">地址</span>
-            <div class="info-content">
-                <div class="address-display" @click="toggleAddressExpand" style="cursor: pointer;">
-                    <code class="address-code">
-                        {{ expanded ? walletAddress : shortAddress }}
-                    </code>
-                    <div class="address-actions">
-                        <button class="address-copy" @click.stop="copyAddress" :title="copySuccess ? '已复制' : '复制地址'">
-                            <svg v-if="!copySuccess" width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                    </div>
+        <!-- 地址部分 - 与币种、网络相同的风格 -->
+        <div class="info-item">
+        <span class="info-label">地址</span>
+        <div class="info-content">
+            <div class="address-display" @click="toggleAddressExpand" style="cursor: pointer;">
+                <code class="address-code">
+                    {{ expanded ? walletAddress : shortAddress }}
+                </code>
+                <div class="address-actions">
+                    <button class="address-copy" @click.stop="copyAddress" :title="copySuccess ? '已复制' : '复制地址'">
+                        <svg v-if="!copySuccess" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none">
+                            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
-          </div>
         </div>
-        
-        <!-- 二维码 -->
-        <div class="qrcode-section">
-          <div class="section-header">
-            <h3 class="section-title">二维码</h3>
-          </div>
-          <div class="qrcode-container">
-            <div class="qrcode-placeholder">
-              <!-- 这里可以放置真实的二维码 -->
-              <div class="qrcode-image">
-                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <!-- 简单的二维码示意 -->
-                  <rect width="120" height="120" fill="#fff"/>
-                  <rect x="10" y="10" width="100" height="100" stroke="#333" stroke-width="2"/>
-                  <!-- 三个定位角 -->
-                  <rect x="15" y="15" width="25" height="25" fill="#333"/>
-                  <rect x="80" y="15" width="25" height="25" fill="#333"/>
-                  <rect x="15" y="80" width="25" height="25" fill="#333"/>
-                  <!-- 数据块示意 -->
-                  <rect x="50" y="50" width="20" height="20" fill="#333"/>
-                  <rect x="50" y="75" width="10" height="10" fill="#333"/>
-                  <rect x="75" y="50" width="10" height="10" fill="#333"/>
-                </svg>
-              </div>
-              <p class="qrcode-hint">扫描二维码充值</p>
-            </div>
-          </div>
         </div>
-
-        <!-- 充值说明 -->
-        <div class="instructions">
-          <div class="instructions-header">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/>
-              <path d="M12 8V12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-              <circle cx="12" cy="16" r="1" fill="currentColor"/>
-            </svg>
-            <h3 class="instructions-title">充值说明</h3>
-          </div>
-          <ul class="instruction-list">
-            <li class="instruction-item">
-              <span class="instruction-number">1</span>
-              <span class="instruction-text">仅支持 TRC20 网络的 USDT 充值</span>
-            </li>
-            <li class="instruction-item">
-              <span class="instruction-number">2</span>
-              <span class="instruction-text">请勿向此地址充值其他币种或使用其他网络</span>
-            </li>
-            <li class="instruction-item">
-              <span class="instruction-number">3</span>
-              <span class="instruction-text">充值完成后，金额会自动添加到您的余额</span>
-            </li>
-          </ul>
-        </div>
-      </section>
     </div>
+    
+    <!-- 二维码 -->
+    <div class="qrcode-section">
+        <div class="qrcode-container">
+            <!-- 加载状态 -->
+            <div v-if="loading" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>加载二维码...</p>
+            </div>
+
+            <!-- 二维码显示 -->
+            <div v-else-if="qrcodeImage" class="qrcode-display">
+                <div class="qrcode-image">
+                <img 
+                    :src="qrcodeImage" 
+                    alt="USDT充值二维码"
+                    class="qrcode-img"
+                />
+                </div>
+                <p class="qrcode-hint">扫描二维码充值</p>
+            </div>
+
+            <!-- 错误状态 -->
+            <div v-else-if="error" class="error-state">
+                <div class="error-icon">!</div>
+                <p>二维码加载失败</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 充值说明 -->
+    <div class="instructions">
+        <div class="instructions-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M12 8V12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="12" cy="16" r="1" fill="currentColor"/>
+        </svg>
+        <h3 class="instructions-title">充值说明</h3>
+        </div>
+        <ul class="instruction-list">
+        <li class="instruction-item">
+            <span class="instruction-number">1</span>
+            <span class="instruction-text">仅支持 TRC20 网络的 USDT 充值</span>
+        </li>
+        <li class="instruction-item">
+            <span class="instruction-number">2</span>
+            <span class="instruction-text">请勿向此地址充值其他币种或使用其他网络</span>
+        </li>
+        <li class="instruction-item">
+            <span class="instruction-number">3</span>
+            <span class="instruction-text">充值完成后，金额会自动添加到您的余额</span>
+        </li>
+        </ul>
+    </div>
+    </section>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import apiClient from '../api/client'
 
-const router = useRouter()
+// 响应式数据
+const loading = ref(true)
+const error = ref('')
+const qrcodeImage = ref('')
+const qrcodeId = ref('')
 
-// 钱包地址
-const walletAddress = ref('TNPqLpM1Y3wGjqM4K5n6b7c8d9e0f1g2h3i4j5k')
-const expanded = ref(false)
-const copySuccess = ref(false)
-// 充值金额相关
-const amount = ref('')
-const amountError = ref('')
-const quickAmounts = [5, 10, 50, 100]
-
-// 设置金额
-function setAmount(value) {
-  amount.value = value.toString()
-  validateAmount()
+// 获取二维码
+const fetchQRCode = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const response = await apiClient.throttledGet('/wallet-bot/me/usdt-recharge/qrcode')
+    
+    if (response.data.data?.qrcode_image) {
+      qrcodeImage.value = `data:image/png;base64,${response.data.data.qrcode_image}`
+      console.log('二维码数据:', response.data.data)
+      qrcodeId.value = response.data.data.qrcode_id || ''
+    } else {
+      throw new Error('未获取到二维码数据')
+    }
+  } catch (err) {
+    console.error('获取二维码失败:', err)
+    error.value = '加载失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
 }
 
-// 验证金额
-function validateAmount() {
-  if (!amount.value) {
-    amountError.value = ''
-    return
-  }
-  
-  const numAmount = parseFloat(amount.value)
-  
-  if (isNaN(numAmount) || numAmount < 10) {
-    amountError.value = '最小充值金额为 10 USDT'
-  } else if (numAmount > 10000) {
-    amountError.value = '单次充值金额不能超过 10,000 USDT'
-  } else {
-    amountError.value = ''
+// 钱包地址
+let walletAddress = ref('')
+const expanded = ref(false)
+const copySuccess = ref(false)
+
+async function loadUserInfo() {
+  loading.value = true
+  try {
+    // 直接调用 API，拦截器会自动处理令牌
+    const response = await apiClient.throttledGet('/wallet-bot/me')
+    walletAddress.value = response.data.data.account.address || ''
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -185,14 +196,9 @@ function toggleAddressExpand() {
   expanded.value = !expanded.value
 }
 
-// 返回首页
-function goHome() {
-  router.push('/')
-}
-
 onMounted(() => {
-  // 可以在这里请求用户的充值地址
-  // fetchUserWalletAddress()
+  loadUserInfo()
+  fetchQRCode()
 })
 </script>
 
@@ -301,13 +307,6 @@ onMounted(() => {
   padding: 16px;
   margin-bottom: 20px;
   border: 1px solid #e6eef8;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
 }
 
 .section-title {
@@ -877,6 +876,239 @@ onMounted(() => {
   .address-expand {
     width: 24px;
     height: 24px;
+  }
+}
+
+.qrcode-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.qrcode-container {
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* 加载状态 */
+.loading-state {
+  padding: 40px 20px;
+}
+
+.loading-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #0088cc;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: #999;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 二维码显示 */
+.qrcode-display .qrcode-image {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.qrcode-img {
+  width: 200px;
+  height: 200px;
+  display: block;
+  border-radius: 4px;
+}
+
+.qrcode-hint {
+  color: #666;
+  font-size: 14px;
+  margin: 12px 0 0;
+}
+
+/* 错误状态 */
+.error-state {
+  padding: 40px 20px;
+}
+
+.error-icon {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #f44336;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 20px;
+  color: #f44336;
+  margin: 0 auto 12px;
+}
+
+.error-state p {
+  color: #f44336;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 占位图状态 */
+.qrcode-placeholder {
+  padding: 30px 0;
+}
+
+.placeholder-image {
+  opacity: 0.5;
+  margin-bottom: 12px;
+}
+
+.qrcode-placeholder .qrcode-hint {
+  color: #999;
+}
+
+/* 响应式调整 */
+@media (max-width: 375px) {
+  .qrcode-img {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .section-title {
+    font-size: 16px;
+  }
+}
+
+/* 修改 .recharge-card */
+.recharge-card {
+  padding: 16px; /* 原20px → 16px */
+  margin-bottom: 12px; /* 原16px → 12px */
+}
+
+/* 修改卡片头部间距 */
+.card-header {
+  margin-bottom: 16px; /* 原20px → 16px */
+  padding-bottom: 12px; /* 原16px → 12px */
+}
+
+/* 修改货币信息区域间距 */
+.currency-info {
+  gap: 8px; /* 原12px → 8px */
+  margin-bottom: 20px; /* 原24px → 20px */
+}
+
+.info-item {
+  padding: 8px 0; /* 原12px → 8px */
+  min-height: 32px; /* 添加最小高度避免过小 */
+}
+
+/* 减小二维码区域内边距 */
+.qrcode-section {
+  padding: 16px; /* 原20px → 16px */
+  margin-bottom: 20px; /* 原24px → 20px */
+}
+
+.qrcode-container {
+  padding: 12px 0; /* 原20px → 12px */
+}
+
+/* 减小二维码图片周围空白 */
+.qrcode-display .qrcode-image {
+  padding: 12px; /* 原16px → 12px */
+  margin-bottom: 8px; /* 原12px → 8px */
+}
+
+.qrcode-img {
+  width: 180px; /* 原200px → 180px */
+  height: 180px; /* 原200px → 180px */
+}
+
+/* 紧凑说明区域 */
+.instructions {
+  padding: 12px 16px; /* 原16px → 12px 16px */
+  margin-bottom: 0; /* 移除底部边距 */
+}
+
+.instructions-header {
+  margin-bottom: 10px; /* 原12px → 10px */
+}
+
+.instruction-item {
+  margin-bottom: 8px; /* 原10px → 8px */
+  padding: 4px 0; /* 添加内边距 */
+}
+
+/* 调整标题大小 */
+.card-title {
+  font-size: 17px; /* 原18px → 17px */
+}
+
+.section-title {
+  font-size: 16px; /* 原18px → 16px */
+}
+
+/* 调整说明文字 */
+.instruction-text {
+  font-size: 12px; /* 原10px → 12px（更清晰） */
+  line-height: 1.4; /* 原1.5 → 1.4 */
+}
+
+.qrcode-hint {
+  font-size: 13px; /* 原14px → 13px */
+  margin: 8px 0 0; /* 调整边距 */
+}
+
+/* 让信息项更紧凑 */
+.info-label {
+  font-size: 13px; /* 原14px → 13px */
+  min-width: 36px; /* 原40px → 36px */
+  padding-top: 0; /* 移除上边距 */
+}
+
+.info-content {
+  margin-left: 12px; /* 原16px → 12px */
+}
+
+/* 徽章更紧凑 */
+.currency-badge, .network-badge {
+  padding: 6px 10px; /* 原8px 12px → 6px 10px */
+  font-size: 13px; /* 原14px → 13px */
+}
+
+@media (max-width: 420px) {
+  .recharge-card {
+    padding: 12px; /* 更紧凑 */
+  }
+  
+  .content {
+    padding: 4px 8px; /* 原6px 12px → 4px 8px */
+  }
+  
+  .qrcode-img {
+    width: 160px; /* 更小 */
+    height: 160px;
+  }
+  
+  .info-item {
+    padding: 6px 0; /* 更紧凑 */
   }
 }
 
