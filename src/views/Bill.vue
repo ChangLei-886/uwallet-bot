@@ -48,34 +48,79 @@
       </div>
     </div>
 
-    <!-- 账单列表 -->
-    <div class="bill-list">
-      <div v-if="filteredBills.length === 0" class="empty-tip">
-        暂无符合条件的账单
-      </div>
-      <div
-        v-for="bill in filteredBills"
-        :key="bill.id"
-        class="bill-item"
-        :class="bill.transaction_type"
-      >
-        <div class="bill-icon">{{ bill.transaction_type === 'recharge' ? '↑' : '↓' }}</div>
-        <div class="bill-info">
-          <div class="bill-title">{{ bill.transaction_type === 'recharge' ? '充值' : '提现' }}</div>
-          <div class="bill-subtitle">
-            <span class="bill-time">{{ formatDate(bill.trading_time) }}</span>
+    <div 
+      class="bill-list-container" 
+      ref="scrollContainer"
+      @scroll="handleScroll"
+      @wheel="handleScroll"
+      @touchmove="handleScroll"
+    >
+      <!-- 账单列表 -->
+      <div class="bill-list">
+        <div v-if="loading && currentPage === 1" class="loading-state">
+          <div class="loading-spinner"></div>
+          <div>加载中...</div>
+        </div>
+        <div v-if="filteredBills.length === 0" class="empty-tip">
+          暂无符合条件的账单
+        </div>
+        <div
+          v-for="bill in filteredBills"
+          :key="bill.id"
+          class="bill-item"
+          :class="bill.transaction_type"
+        >
+          <div class="bill-icon">{{ bill.transaction_type === 'recharge' ? '↑' : '↓' }}</div>
+          <div class="bill-info">
+            <div class="bill-title">{{ bill.transaction_type === 'recharge' ? '充值' : '提现' }}</div>
+            <div class="bill-subtitle">
+              <span class="bill-time">{{ formatDate(bill.trading_time) }}</span>
+            </div>
+            <div class="bill-subtitle">
+              <span 
+                class="bill-txid" 
+                @click="toggleTxid(bill.id)"
+                :title="bill.txid"
+                :data-expanded="expandedStates[bill.id]"
+              >
+                {{ formatTxid(bill.txid, bill.id) }}
+              </span>
+
+              <button class="copy-btn" @click.stop="copyTxid(bill.txid, bill.id)" :title="txidCopiedStates[bill.id] ? '已复制' : '复制TXID'" aria-live="polite">
+                  <svg v-if="!txidCopiedStates[bill.id]" class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg v-else class="copy-icon success" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="copy-text">复制</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bill-amount">
+            {{ bill.transaction_type === 'recharge' ? '+' : '-' }}¥{{ formatNumber(bill.amount) }}
           </div>
         </div>
-        <div class="bill-amount">
-          {{ bill.transaction_type === 'recharge' ? '+' : '-' }}¥{{ formatNumber(bill.amount) }}
-        </div>
-      </div>
 
-      <!-- 分页加载更多 -->
-      <div v-if="filteredBills.length < totalCount" class="load-more">
-        <button class="load-more-btn" @click="loadMore" :disabled="loading">
-          {{ loading ? '加载中...' : '加载更多' }}
-        </button>
+        <!-- 加载更多指示器 -->
+        <div v-if="loadingMore" class="loading-more">
+          <div class="loading-spinner small"></div>
+          <span>加载中...</span>
+        </div>
+        
+        <!-- 显示"没有更多"提示 -->
+        <div v-if="!hasMore && filteredBills.length > 0" class="no-more">
+          没有更多记录了
+        </div>
+        
+        <!-- 分页加载更多 -->
+        <div v-if="filteredBills.length < totalCount" class="load-more">
+          <button class="load-more-btn" @click="loadMore" :disabled="loading">
+            {{ loading ? '加载中...' : '加载更多' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -170,8 +215,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, watch } from 'vue'
-import axios from 'axios'
+import { ref, computed, reactive, onMounted, watch, onUnmounted, nextTick} from 'vue'
 import apiClient from '../api/client'
 
 // 第一行筛选：交易类型
@@ -193,11 +237,127 @@ const showDateModal = ref(false)
 const currentYear = ref(new Date().getFullYear())
 const dateFilter = ref('all') // 'all' 表示全部时间，'specific' 表示具体月份
 
+const expandedStates = ref({}) // 存储每个账单的展开状态
+const formatTxid = (txid, billId) => {
+  if (!txid) return ''
+  
+  if (expandedStates.value[billId]){  
+    return txid 
+  } else {
+    return `${txid.slice(0,10)}...${txid.slice(-10)}`
+  }
+}
+
+function toggleTxid(billId) {
+  // 切换当前账单的展开状态
+  expandedStates.value[billId] = !expandedStates.value[billId]
+}
+
+const txidCopiedStates = ref({}) // 每个账单的复制状态
+let txidCopyTimer = null // 用于清除复制状态
+
+// 复制 TXID 函数（修复版）
+async function copyTxid(txid, billId) {
+  if (!txid) return
+  
+  try {
+    await navigator.clipboard.writeText(txid)
+    
+    // 清除之前的定时器
+    if (txidCopyTimer) {
+      clearTimeout(txidCopyTimer)
+      txidCopyTimer = null
+    }
+    
+    // 先清除所有状态
+    Object.keys(txidCopiedStates.value).forEach(key => {
+      txidCopiedStates.value[key] = false
+    })
+    
+    // 只设置当前行的复制状态
+    txidCopiedStates.value[billId] = true
+    
+    // 使用统一的 toast 提示
+    window.dispatchEvent(new CustomEvent('app:toast', { 
+      detail: '已复制' 
+    }))
+    
+    // 2秒后清除当前行的复制状态
+    txidCopyTimer = setTimeout(() => {
+      txidCopiedStates.value[billId] = false
+    }, 2000)
+    
+  } catch (err) {
+    console.error('复制失败:', err)
+  }
+}
+
 const loading = ref(false)
+const loadingMore = ref(false) // 专门用于加载更多的状态
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalCount = ref(0)
-const filteredBills = ref([]) // 从计算属性改为响应式数组
+const filteredBills = ref([])
+const scrollContainer = ref(null)
+const hasMore = computed(() => {
+  return filteredBills.value.length < totalCount.value
+})
+
+// 监听滚动事件
+const handleScroll = () => {
+  if (!scrollContainer.value || loadingMore.value || !hasMore.value) return
+  
+  const container = scrollContainer.value
+  const scrollTop = container.scrollTop
+  const scrollHeight = container.scrollHeight
+  const clientHeight = container.clientHeight
+  
+  // 滚动到底部时触发加载更多（距离底部100px时触发）
+  if (scrollHeight - scrollTop - clientHeight < 100) {
+    loadMore()
+  }
+}
+
+
+// 修改后的 loadMore 函数
+async function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  
+  loadingMore.value = true
+  try {
+    currentPage.value++
+    const params = buildRequestParams()
+    const response = await apiClient.throttledGet('/wallet-bot/me/transactions/paginated', { params })
+    
+    // 根据实际API响应结构调整
+    const newItems = response.data?.data?.items || 
+                     response.data?.items || 
+                     response.data?.data || 
+                     []
+    
+    // 追加数据
+    filteredBills.value = [...filteredBills.value, ...newItems]
+    
+    // 更新总数
+    if (response.data?.data?.num !== undefined) {
+      totalCount.value = response.data.data.num
+    } else if (response.data?.total !== undefined) {
+      totalCount.value = response.data.total
+    } else if (response.data?.total_count !== undefined) {
+      totalCount.value = response.data.total_count
+    }
+    
+  } catch (error) {
+    console.error('加载更多失败:', error)
+    currentPage.value-- // 失败时回退页码
+    // 显示错误提示
+    window.dispatchEvent(new CustomEvent('app:toast', { 
+      detail: '加载失败，请重试' 
+    }))
+  } finally {
+    loadingMore.value = false
+  }
+}
 
 
 // 计算属性：检查是否有设置金额范围
@@ -243,43 +403,37 @@ function buildRequestParams() {
   return params
 }
 
-// 新增：获取账单数据
+// 修改 fetchBills 函数（重置数据）
 async function fetchBills() {
   loading.value = true
   try {
+    currentPage.value = 1
     const params = buildRequestParams()
-    const response = await apiClient.debouncedGet('/wallet-bot/me/transactions/paginated', { params })
+    const response = await apiClient.throttledGet('/wallet-bot/me/transactions/paginated', { params })
     
-    // 假设接口返回结构为 { data: [], total: 100, page: 1, page_size: 20 }
-    filteredBills.value = response.data.data.items || []
-    totalCount.value = response.data.data.num || 0
+    // 根据实际API响应结构调整
+    const items = response.data?.data?.items || 
+                  response.data?.items || 
+                  response.data?.data || 
+                  []
     
-    // 如果接口返回的字段名不同，可能需要适配
-    // 例如: filteredBills.value = response.data.transactions
-    // totalCount.value = response.data.total_count
+    filteredBills.value = items
+    
+    // 更新总数
+    if (response.data?.data?.num !== undefined) {
+      totalCount.value = response.data.data.num
+    } else if (response.data?.total !== undefined) {
+      totalCount.value = response.data.total
+    } else if (response.data?.total_count !== undefined) {
+      totalCount.value = response.data.total_count
+    }
+    
   } catch (error) {
     console.error('获取账单失败:', error)
-    // 可以显示错误提示
-  } finally {
-    loading.value = false
-  }
-}
-
-// 新增：加载更多
-async function loadMore() {
-  currentPage.value++
-  loading.value = true
-  try {
-    const params = buildRequestParams()
-    const response = await axios.get('/wallet-bot/me/transactions/paginated', { params })
-    
-    // 追加数据
-    const newBills = response.data.data || response.data
-    filteredBills.value = [...filteredBills.value, ...newBills]
-    
-  } catch (error) {
-    console.error('加载更多失败:', error)
-    currentPage.value-- // 失败时回退页码
+    // 显示错误提示
+    window.dispatchEvent(new CustomEvent('app:toast', { 
+      detail: '获取账单失败' 
+    }))
   } finally {
     loading.value = false
   }
@@ -297,7 +451,6 @@ async function applyAmountRange() {
   amountRange.min = tempAmountRange.min
   amountRange.max = tempAmountRange.max
   showAmountModal.value = false
-  currentPage.value = 1
   await fetchBills()
 }
 
@@ -307,14 +460,12 @@ async function resetAmountRange() {
   tempAmountRange.max = null
   amountRange.min = null
   amountRange.max = null
-  currentPage.value = 1
   await fetchBills()
 }
 
 // 修改：应用日期筛选
 async function applyDate() {
   showDateModal.value = false
-  currentPage.value = 1
   await fetchBills()
 }
 
@@ -323,15 +474,16 @@ async function resetDate() {
   dateFilter.value = 'all'
   selectedDate.value = new Date()
   currentYear.value = new Date().getFullYear()
-  currentPage.value = 1
   await fetchBills()
 }
 
-// 新增：监听筛选条件变化，自动刷新（可选）
+// 监听筛选条件变化，自动刷新
 watch([activeType, () => amountRange.min, () => amountRange.max, dateFilter], () => {
-
-  // 可以添加防抖，避免频繁请求
-  fetchBills()
+  // 使用防抖避免频繁请求
+  clearTimeout(window.fetchTimer)
+  window.fetchTimer = setTimeout(() => {
+    fetchBills()
+  }, 300)
 }, { deep: true })
 
 // 修改初始化
@@ -339,6 +491,39 @@ onMounted(async () => {
   const now = new Date()
   currentYear.value = now.getFullYear()
   await fetchBills() // 初始加载数据
+
+  // 确保容器高度足够
+  // nextTick(() => {
+  //   if (scrollContainer.value) {
+  //     // 确保容器有足够的高度才能滚动
+  //     const setContainerHeight = () => {
+  //       if (scrollContainer.value) {
+  //         const windowHeight = window.innerHeight
+  //         const containerRect = scrollContainer.value.getBoundingClientRect()
+  //         const containerTop = containerRect.top
+  //         scrollContainer.value.style.height = `${windowHeight - containerTop}px`
+  //       }
+  //     }
+      
+  //     setContainerHeight()
+  //     window.addEventListener('resize', setContainerHeight)
+  //   }
+  // })
+  nextTick(() => {
+    // 只检查容器是否存在，不修改其样式
+    if (scrollContainer.value) {
+      console.log('滚动容器已挂载，高度:', scrollContainer.value.clientHeight)
+    }
+  })
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (window.fetchTimer) {
+    clearTimeout(window.fetchTimer)
+  }
+   // 删除之前可能添加的resize监听
+  window.removeEventListener('resize', setContainerHeight)
 })
 
 // 方法：格式化金额范围显示
@@ -572,7 +757,7 @@ function nextYear() {
 }
 
 .bill-icon {
-  width: 40px;
+  width: 5px;
   height: 40px;
   border-radius: 50%;
   display: flex;
@@ -612,14 +797,30 @@ function nextYear() {
   align-items: center;
   font-size: 13px;
   color: #999;
+  word-break: break-all;      /* 强制所有字符换行 */
+  word-wrap: break-word;     /* 兼容性 */
+  overflow-wrap: break-word; /* 现代标准 */
+  line-height: 1.4;          /* 增加行高提升可读性 */
 }
 
 .bill-time {
-  margin-right: 4px;
+  margin-right: 8px;
+  white-space: nowrap; /* 时间保持单行 */
+  flex-shrink: 0;      /* 防止时间被压缩 */
 }
 
-.bill-category {
-  opacity: 0.8;
+.bill-txid {
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+  /* 确保 txid 文本可以换行 */
+  white-space: normal !important;
+  word-break: break-all;
+  max-width: 100%;           /* 防止超出容器 */
+}
+
+.bill-txid:hover {
+  text-decoration: underline;
 }
 
 .bill-amount {
@@ -866,8 +1067,6 @@ function nextYear() {
   color: white;
 }
 
-<style scoped>
-/* 新增：加载状态样式 */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -929,6 +1128,51 @@ function nextYear() {
   border-radius: 8px;
 }
 
+/* 复制按钮 hover 效果（与 home.vue 保持一致） */
+.copy-btn:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 复制成功时的图标颜色 */
+.copy-btn svg[stroke="currentColor"] {
+  transition: color 0.2s;
+}
+
+/* TXID 文本样式保持原样 */
+.bill-txid {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  transition: all 0.2s;
+}
+
+/* 展开状态的 TXID */
+.bill-txid.expanded {
+  white-space: pre-wrap;
+  background: #f8f9fa;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 2px;
+  display: block;
+  word-spacing: -0.5px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* 移动端适配：小屏隐藏复制文字 */
+@media (max-width: 420px) {
+  .copy-text {
+    display: none;
+  }
+  
+  .copy-btn {
+    padding: 4px;
+  }
+}
+
 /* 响应式调整 */
 @media (max-width: 375px) {
   .filter-tabs {
@@ -963,5 +1207,91 @@ function nextYear() {
   .bill-item {
     padding: 14px;
   }
+}
+
+.copy-btn { background:transparent; border:none; display:inline-flex; align-items:center; gap:6px; padding:6px; border-radius:8px; color:var(--tg-text); cursor:pointer }
+.copy-icon { color:var(--tg-text); opacity:0.9 }
+.copy-icon.success { color: #22c55e }
+.copy-text { font-size:13px; color:var(--tg-text) }
+@media (max-width:420px) {
+  .copy-text { display:none }
+}
+
+<style scoped>
+/* 添加滚动容器样式 */
+.bill-list-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #f8f9fa;
+}
+
+/* 加载更多指示器 */
+.loading-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+.loading-spinner.small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0088cc;
+  margin-bottom: 8px;
+}
+
+/* 没有更多提示 */
+.no-more {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+/* 确保账单列表容器有正确的布局 */
+.bill-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 500px;
+  margin: 0 auto;
+  background: #f8f9fa;
+}
+
+.filter-tabs,
+.dropdown-filters {
+  flex-shrink: 0;
+}
+
+.bill-list-container {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
+  position: relative; /* 确保定位正确 */
+}
+
+/* 移动端优化 */
+@media (max-width: 375px) {
+  .bill-page {
+    font-size: 14px;
+  }
+  
+  .bill-list-container {
+    padding: 0 12px;
+  }
+}
+
+/* 加载状态优化 */
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-state .loading-spinner {
+  margin: 0 auto 10px;
 }
 </style>

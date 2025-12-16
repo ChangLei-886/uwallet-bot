@@ -72,123 +72,153 @@ axiosInstance.interceptors.response.use(
   }
 )
 
-// 创建一个API客户端类，封装防抖功能
+// 创建一个API客户端类，节流策略
+// api/client.js
+// api/client.js
 class ApiClient {
   constructor() {
     this.instance = axiosInstance
-    this.requestCache = new Map() // 缓存防抖函数
+    this.lastRequestTime = new Map() // 记录每个请求key的最后执行时间
+    this.pendingRequests = new Map() // 记录进行中的请求
+    this.cancelTokens = new Map()    // 取消令牌
   }
   
   /**
-   * 普通GET请求
+   * 节流GET：固定时间间隔内只执行一次，中间请求被忽略
+   * @param {number} throttleMs - 节流时间（毫秒），默认500ms
    */
-  async get(url, config = {}) {
-    return this.instance.get(url, config)
-  }
-  
-  /**
-   * 普通POST请求
-   */
-  async post(url, data = {}, config = {}) {
-    return this.instance.post(url, data, config)
-  }
-  
-  /**
-   * 防抖GET请求
-   * @param {string} url - 请求地址
-   * @param {Object} config - 请求配置
-   * @param {number} delay - 防抖延迟(ms)
-   * @returns {Promise} - 防抖处理的Promise
-   */
-  debouncedGet(url, config = {}, delay = 300) {
-    const cacheKey = `${url}:${JSON.stringify(config)}:${delay}`
+  throttledGet(url, config = {}, throttleMs = 500) {
+    const key = this._getRequestKey(url, config)
+    const now = Date.now()
     
-    if (!this.requestCache.has(cacheKey)) {
-      const debouncedFn = debounce(async () => {
-        try {
-          return await this.instance.get(url, config)
-        } catch (error) {
-          throw error
-        }
-      }, delay)
+    // 获取上次请求时间
+    const lastTime = this.lastRequestTime.get(key) || 0
+    const timeSinceLastRequest = now - lastTime
+    
+    // 如果距离上次请求时间小于节流间隔，忽略本次请求
+    if (timeSinceLastRequest < throttleMs) {
+      console.log(`🚫 请求被节流忽略: ${key} (${timeSinceLastRequest}ms < ${throttleMs}ms)`)
       
-      this.requestCache.set(cacheKey, debouncedFn)
+      // 选项1：直接返回一个拒绝的Promise（告诉调用者请求被忽略）
+      return Promise.reject(new ThrottledError('请求过于频繁，已被节流忽略'))
+      
+      // 选项2：返回上一次请求的结果（如果有缓存）
+      // return this._getCachedResponse(key)
     }
     
-    return this.requestCache.get(cacheKey)()
+    // 更新最后请求时间
+    this.lastRequestTime.set(key, now)
+    
+    // 取消之前可能还在进行的同一个请求
+    this._cancelPendingRequest(key, '被新的节流请求取消')
+    
+    // 执行请求
+    return this._executeThrottledRequest(url, config, key)
   }
   
   /**
-   * 防抖POST请求
+   * 执行节流请求
    */
-  debouncedPost(url, data = {}, config = {}, delay = 300) {
-    const cacheKey = `${url}:${JSON.stringify(data)}:${JSON.stringify(config)}:${delay}`
+  async _executeThrottledRequest(url, config, key) {
+    // 创建取消令牌
+    const cancelToken = axios.CancelToken.source()
+    this.cancelTokens.set(key, cancelToken)
+    this.pendingRequests.set(key, true)
     
-    if (!this.requestCache.has(cacheKey)) {
-      const debouncedFn = debounce(async () => {
-        try {
-          return await this.instance.post(url, data, config)
-        } catch (error) {
-          throw error
-        }
-      }, delay)
-      
-      this.requestCache.set(cacheKey, debouncedFn)
-    }
-    
-    return this.requestCache.get(cacheKey)()
-  }
-  
-  /**
-   * 带取消功能的防抖请求
-   * @returns {Function} 取消函数
-   */
-  cancellableDebouncedGet(url, config = {}, delay = 300) {
-    let cancelToken = null
-    
-    const debouncedFn = debounce(async () => {
-      if (cancelToken) {
-        cancelToken.cancel('Operation canceled due to new request')
+    try {
+      const requestConfig = {
+        ...config,
+        cancelToken: cancelToken.token,
+        timeout: config.timeout || 10000
       }
       
-      cancelToken = axios.CancelToken.source()
-      config.cancelToken = cancelToken.token
+      const response = await this.instance.get(url, requestConfig)
       
-      try {
-        return await this.instance.get(url, config)
-      } catch (error) {
-        if (!axios.isCancel(error)) {
-          throw error
-        }
+      // 清理
+      this._cleanupRequest(key)
+      
+      return response
+      
+    } catch (error) {
+      this._cleanupRequest(key)
+      
+      if (axios.isCancel(error)) {
+        throw new RequestCancelledError('请求被取消')
       }
-    }, delay)
-    
-    const execute = () => debouncedFn()
-    const cancel = () => {
-      if (cancelToken) {
-        cancelToken.cancel('Request canceled by user')
-      }
-    }
-    
-    return { execute, cancel }
-  }
-  
-  /**
-   * 清除指定URL的缓存
-   */
-  clearCache(url) {
-    for (const [key] of this.requestCache) {
-      if (key.startsWith(url)) {
-        this.requestCache.delete(key)
-      }
+      throw error
     }
   }
   
   /**
-   * 清除所有缓存
+   * 获取请求的唯一key（基于URL和参数）
    */
-  clearAllCache() {
-    this.requestCache.clear()
+  _getRequestKey(url, config) {
+    // 只根据核心参数生成key，忽略不重要的配置
+    const params = config.params || {}
+    
+    // 对参数排序，确保相同参数不同顺序也能识别为同一个请求
+    const sortedParams = Object.keys(params)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = params[key]
+        return acc
+      }, {})
+    
+    return `${url}:${JSON.stringify(sortedParams)}`
+  }
+  
+  /**
+   * 取消进行中的请求
+   */
+  _cancelPendingRequest(key, reason = '请求被取消') {
+    if (this.cancelTokens.has(key)) {
+      this.cancelTokens.get(key).cancel(reason)
+      this.cancelTokens.delete(key)
+    }
+    this.pendingRequests.delete(key)
+  }
+  
+  /**
+   * 清理请求相关资源
+   */
+  _cleanupRequest(key) {
+    this.cancelTokens.delete(key)
+    this.pendingRequests.delete(key)
+  }
+  
+  /**
+   * 重置节流状态（用于特定key）
+   */
+  resetThrottle(key) {
+    this.lastRequestTime.delete(key)
+    this._cancelPendingRequest(key)
+  }
+  
+  /**
+   * 重置所有节流状态
+   */
+  resetAllThrottles() {
+    this.lastRequestTime.clear()
+    for (const key of this.cancelTokens.keys()) {
+      this._cancelPendingRequest(key, '重置所有节流')
+    }
+  }
+}
+
+// 自定义错误类型
+class ThrottledError extends Error {
+  constructor(message = '请求被节流忽略') {
+    super(message)
+    this.name = 'ThrottledError'
+    this.isThrottled = true
+  }
+}
+
+class RequestCancelledError extends Error {
+  constructor(message = '请求被取消') {
+    super(message)
+    this.name = 'RequestCancelledError'
+    this.isCancelled = true
   }
 }
 

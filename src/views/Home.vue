@@ -256,7 +256,7 @@ async function loadUserInfo() {
   loading.value = true
   try {
     // 直接调用 API，拦截器会自动处理令牌
-    const response = await apiClient.debouncedGet('/wallet-bot/me')
+    const response = await apiClient.throttledGet('/wallet-bot/me')
     userInfo.value = response.data.data
   } catch (error) {
     console.error('获取用户信息失败:', error)
@@ -267,7 +267,7 @@ async function loadUserInfo() {
 
 async function loadBalance() {
   try {
-    const response = await apiClient.debouncedGet('/wallet-bot/me/balance')
+    const response = await apiClient.throttledGet('/wallet-bot/me/balance')
     balance.value = response.data.data.balance.toFixed(2)
   } catch (error) {
     console.error('获取余额失败:', error)
