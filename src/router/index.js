@@ -4,6 +4,7 @@ import Withdraw from '../views/Withdraw.vue'
 import Me from '../views/Me.vue'
 import Settings from '../views/Settings.vue'
 import Bill from '../views/Bill.vue'
+import WithdrawPassword from '../views/WithdrawPassword.vue'
 
 const routes = [
   { path: '/home', name: 'Home', component: Home},
@@ -12,6 +13,7 @@ const routes = [
   { path: '/withdraw', name: 'Withdraw', component: Withdraw },
   { path: '/me', name: 'Me', component: Me },
   { path: '/settings', name: 'Settings', component: Settings },
+  { path: '/withdraw-password', name: 'WithdrawPassword', component: WithdrawPassword },
 ]
 
 export default routes

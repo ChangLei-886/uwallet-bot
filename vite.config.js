@@ -20,6 +20,6 @@ export default defineConfig({
         target: 'http://localhost:8000', // 你的后端地址
         changeOrigin: true, // 允许跨域
       }
-    }
+    },
   }
 })

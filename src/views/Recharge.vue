@@ -41,54 +41,42 @@
 
         <!-- 地址部分 - 与币种、网络相同的风格 -->
         <div class="info-item">
-        <span class="info-label">地址</span>
-        <div class="info-content">
-            <div class="address-display" @click="toggleAddressExpand" style="cursor: pointer;">
-                <code class="address-code">
-                    {{ expanded ? walletAddress : shortAddress }}
-                </code>
-                <div class="address-actions">
-                    <button class="address-copy" @click.stop="copyAddress" :title="copySuccess ? '已复制' : '复制地址'">
-                        <svg v-if="!copySuccess" width="12" height="12" viewBox="0 0 24 24" fill="none">
-                            <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+            <span class="info-label">地址</span>
+            <div class="info-content">
+                <div class="address-display" @click="toggleAddressExpand" style="cursor: pointer;">
+                    <code class="address-code">
+                        {{ expanded ? walletAddress : shortAddress }}
+                    </code>
+                    <div class="address-actions">
+                        <button class="address-copy" @click.stop="copyAddress" :title="copySuccess ? '已复制' : '复制地址'">
+                            <svg v-if="!copySuccess" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                <rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div v-if="loading" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>加载二维码...</p>
         </div>
-    </div>
-    
-    <!-- 二维码 -->
-    <div class="qrcode-section">
-        <div class="qrcode-container">
-            <!-- 加载状态 -->
-            <div v-if="loading" class="loading-state">
-                <div class="loading-spinner"></div>
-                <p>加载二维码...</p>
-            </div>
 
-            <!-- 二维码显示 -->
-            <div v-else-if="qrcodeImage" class="qrcode-display">
-                <div class="qrcode-image">
-                <img 
-                    :src="qrcodeImage" 
-                    alt="USDT充值二维码"
-                    class="qrcode-img"
-                />
-                </div>
-                <p class="qrcode-hint">扫描二维码充值</p>
+        <!-- 二维码显示 -->
+        <div v-else-if="qrcodeImage" class="qrcode-display">
+            <div class="qrcode-image">
+            <img 
+                :src="qrcodeImage" 
+                alt="USDT充值二维码"
+                class="qrcode-img"
+            />
             </div>
-
-            <!-- 错误状态 -->
-            <div v-else-if="error" class="error-state">
-                <div class="error-icon">!</div>
-                <p>二维码加载失败</p>
-            </div>
+            <p class="qrcode-hint">扫描二维码充值</p>
         </div>
     </div>
 
@@ -359,11 +347,6 @@ onMounted(() => {
   color: var(--tg-text-secondary);
 }
 
-/* 二维码部分 */
-.qrcode-section {
-  margin-bottom: 24px;
-}
-
 .qrcode-container {
   text-align: center;
 }
@@ -378,6 +361,7 @@ onMounted(() => {
 
 .qrcode-image {
   margin-bottom: 12px;
+  align-items: center;
 }
 
 .qrcode-hint {
@@ -1110,6 +1094,93 @@ onMounted(() => {
   .info-item {
     padding: 6px 0; /* 更紧凑 */
   }
+}
+
+/* 调整二维码区域 - 减少上下间距 */
+.qrcode-section {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 16px; /* 保持左右内边距，减少上下内边距 */
+  margin-bottom: 12px; /* 大幅减少底部外边距：原20px → 12px */
+  margin-top: 4px; /* 添加或调整顶部外边距，减少与地址的间距 */
+}
+
+/* 如果二维码容器仍有额外的内边距 */
+.qrcode-container {
+  text-align: center;
+  padding: 8px 0; /* 减少容器内边距：原12px 0 → 8px 0 */
+}
+
+/* 确保二维码图片没有额外的外边距 */
+.qrcode-display .qrcode-image {
+  background: white;
+  padding: 8px; /* 如果仍有内边距，可以减少 */
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 4px; /* 大幅减少图片底部外边距 */
+}
+
+.qrcode-img {
+  width: 180px; /* 保持原大小 */
+  height: 180px;
+  display: block;
+  border-radius: 4px;
+}
+
+.qrcode-hint {
+  color: #666;
+  font-size: 13px;
+  margin: 4px 0 0; /* 大幅减少提示文字上边距：原8px → 4px */
+}
+
+/* 如果说明区域顶部间距也过大，可以一起调整 */
+.instructions {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 4px; /* 减少说明区域的上边距，让它更贴近二维码 */
+}
+
+/* 添加二维码显示区域样式 */
+.qrcode-display {
+  width: 100%; /* 确保占满宽度 */
+  text-align: center; /* 居中文本内容 */
+  margin-top: 8px; /* 与地址的间距 */
+  padding: 12px 0; /* 上下内边距 */
+}
+
+/* 二维码图片容器 */
+.qrcode-image {
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  margin-bottom: 6px; /* 与提示文字的间距 */
+}
+
+/* 二维码图片 */
+.qrcode-img {
+  width: 160px; /* 可以根据需要调整 */
+  height: 160px;
+  border-radius: 4px;
+}
+
+/* 二维码提示文字 */
+.qrcode-hint {
+  font-size: 13px;
+  color: var(--tg-text-secondary);
+  text-align: center; /* 确保文字居中 */
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 加载状态也要居中 */
+.loading-state {
+  width: 100%;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.loading-spinner {
+  margin: 0 auto 8px; /* 居中并添加下边距 */
 }
 
 </style>

@@ -1,38 +1,326 @@
 <template>
-  <div class="page">
-    <h2>设置</h2>
-    <label>
-      显示名
-      <input v-model="displayName" />
-    </label>
-    <label>
-      接收通知
-      <input type="checkbox" v-model="notifications" />
-    </label>
-    <div class="actions">
-      <button @click="save">保存设置</button>
-    </div>
-    <div v-if="message" class="message">{{ message }}</div>
+  <div class="settings-page">
+    <!-- 设置卡片 -->
+    <section class="settings-card">
+      <div class="card-header">
+        <div class="card-header-left">
+          <h2 class="card-title">设置</h2>
+        </div>
+      </div>
+      
+      <!-- 设置项列表 -->
+      <div class="settings-list">
+        <!-- 提现密码 -->
+        <router-link to="/settings/withdraw-password" class="settings-item">
+          <div class="item-left">
+            <div class="item-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="10" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M7 10V6a5 5 0 0 1 5-5v0a5 5 0 0 1 5 5v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="12" cy="15" r="1.5" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">提现密码</h3>
+              <p class="item-desc">设置或修改提现密码</p>
+            </div>
+          </div>
+          <div class="item-right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </router-link>
+        
+        <!-- 提现地址管理 -->
+        <router-link to="/settings/addresses" class="settings-item">
+          <div class="item-left">
+            <div class="item-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21C15.5 17.4 19 14.176 19 10.2C19 6.224 15.866 3 12 3C8.13401 3 5 6.224 5 10.2C5 14.176 8.5 17.4 12 21Z" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">提现地址管理</h3>
+              <p class="item-desc">管理您的提现地址</p>
+            </div>
+          </div>
+          <div class="item-right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </router-link>
+        
+        <!-- 支付密码 -->
+        <router-link to="/settings/payment-password" class="settings-item">
+          <div class="item-left">
+            <div class="item-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M2 10H22" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="18" cy="15" r="1" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">支付密码</h3>
+              <p class="item-desc">设置或修改支付密码</p>
+            </div>
+          </div>
+          <div class="item-right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </router-link>
+        
+        <!-- 安全中心 -->
+        <router-link to="/settings/security" class="settings-item">
+          <div class="item-left">
+            <div class="item-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">安全中心</h3>
+              <p class="item-desc">查看账户安全状态</p>
+            </div>
+          </div>
+          <div class="item-right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </router-link>
+        
+        <!-- 关于我们 -->
+        <router-link to="/settings/about" class="settings-item">
+          <div class="item-left">
+            <div class="item-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M12 8V12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                <circle cx="12" cy="16" r="1" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="item-content">
+              <h3 class="item-title">关于我们</h3>
+              <p class="item-desc">版本信息与帮助</p>
+            </div>
+          </div>
+          <div class="item-right">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </router-link>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-
-const displayName = ref('示例用户')
-const notifications = ref(true)
-const message = ref('')
-
-function save() {
-  message.value = '设置已保存（仅前端模拟）'
-  setTimeout(() => (message.value = ''), 2000)
-}
+// 这个页面只是菜单列表，不需要复杂逻辑
 </script>
 
 <style scoped>
-.page { padding:12px }
-label { display:block; margin:10px 0 }
-input[type="checkbox"] { margin-left:8px }
-.actions { margin-top:14px }
-.message { color: green }
+.settings-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* 设置卡片 */
+.settings-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(31,45,61,0.08);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--tg-text);
+}
+
+/* 设置列表 */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* 设置项 */
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  text-decoration: none;
+  color: inherit;
+  transition: background-color 0.2s;
+  border-radius: 8px;
+  margin: 0 -8px;
+  padding: 16px 8px;
+}
+
+.settings-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.settings-item:active {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* 左边部分 */
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(64, 158, 255, 0.1);
+  color: var(--tg-accent);
+  flex-shrink: 0;
+}
+
+.item-icon svg {
+  color: var(--tg-accent);
+}
+
+/* 第二个设置项不同的图标颜色 */
+.settings-item:nth-child(2) .item-icon {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.settings-item:nth-child(2) .item-icon svg {
+  color: #10b981;
+}
+
+/* 第三个设置项不同的图标颜色 */
+.settings-item:nth-child(3) .item-icon {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.settings-item:nth-child(3) .item-icon svg {
+  color: #f59e0b;
+}
+
+/* 第四个设置项不同的图标颜色 */
+.settings-item:nth-child(4) .item-icon {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.settings-item:nth-child(4) .item-icon svg {
+  color: #8b5cf6;
+}
+
+/* 第五个设置项不同的图标颜色 */
+.settings-item:nth-child(5) .item-icon {
+  background: rgba(107, 114, 128, 0.1);
+}
+
+.settings-item:nth-child(5) .item-icon svg {
+  color: #6b7280;
+}
+
+.item-content {
+  flex: 1;
+}
+
+.item-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--tg-text);
+}
+
+.item-desc {
+  font-size: 13px;
+  color: var(--tg-text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* 右边箭头 */
+.item-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--tg-text-secondary);
+  flex-shrink: 0;
+}
+
+/* 分割线 */
+.settings-item:not(:last-child) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* 响应式设计 */
+@media (max-width: 420px) {
+  .settings-page {
+    padding: 0;
+  }
+  
+  .settings-card {
+    padding: 16px;
+    border-radius: 0;
+  }
+  
+  .card-header {
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .settings-item {
+    padding: 14px 8px;
+  }
+  
+  .item-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .item-title {
+    font-size: 15px;
+  }
+  
+  .item-desc {
+    font-size: 12px;
+  }
+}
 </style>

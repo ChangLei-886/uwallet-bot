@@ -67,60 +67,69 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest)
       }
     }
-    
+
     return Promise.reject(error)
   }
 )
 
 // 创建一个API客户端类，节流策略
 // api/client.js
-// api/client.js
 class ApiClient {
   constructor() {
     this.instance = axiosInstance
-    this.lastRequestTime = new Map() // 记录每个请求key的最后执行时间
-    this.pendingRequests = new Map() // 记录进行中的请求
-    this.cancelTokens = new Map()    // 取消令牌
+    this.lastRequestTime = new Map()
+    this.pendingRequests = new Map()
+    this.cancelTokens = new Map()
   }
   
   /**
    * 节流GET：固定时间间隔内只执行一次，中间请求被忽略
-   * @param {number} throttleMs - 节流时间（毫秒），默认500ms
    */
   throttledGet(url, config = {}, throttleMs = 500) {
-    const key = this._getRequestKey(url, config)
-    const now = Date.now()
-    
-    // 获取上次请求时间
-    const lastTime = this.lastRequestTime.get(key) || 0
-    const timeSinceLastRequest = now - lastTime
-    
-    // 如果距离上次请求时间小于节流间隔，忽略本次请求
-    if (timeSinceLastRequest < throttleMs) {
-      console.log(`🚫 请求被节流忽略: ${key} (${timeSinceLastRequest}ms < ${throttleMs}ms)`)
-      
-      // 选项1：直接返回一个拒绝的Promise（告诉调用者请求被忽略）
-      return Promise.reject(new ThrottledError('请求过于频繁，已被节流忽略'))
-      
-      // 选项2：返回上一次请求的结果（如果有缓存）
-      // return this._getCachedResponse(key)
-    }
-    
-    // 更新最后请求时间
-    this.lastRequestTime.set(key, now)
-    
-    // 取消之前可能还在进行的同一个请求
-    this._cancelPendingRequest(key, '被新的节流请求取消')
-    
-    // 执行请求
-    return this._executeThrottledRequest(url, config, key)
+    const key = this._getRequestKey('GET', url, config)
+    return this._executeThrottledRequest('GET', url, null, config, key, throttleMs)
   }
   
   /**
-   * 执行节流请求
+   * 节流POST：固定时间间隔内只执行一次，中间请求被忽略
    */
-  async _executeThrottledRequest(url, config, key) {
-    // 创建取消令牌
+  throttledPost(url, data = {}, config = {}, throttleMs = 500) {
+    const key = this._getRequestKey('POST', url, config, data)
+    return this._executeThrottledRequest('POST', url, data, config, key, throttleMs)
+  }
+  
+  /**
+   * 节流PUT：固定时间间隔内只执行一次，中间请求被忽略
+   */
+  throttledPut(url, data = {}, config = {}, throttleMs = 500) {
+    const key = this._getRequestKey('PUT', url, config, data)
+    return this._executeThrottledRequest('PUT', url, data, config, key, throttleMs)
+  }
+  
+  /**
+   * 通用的节流请求执行方法
+   */
+  _executeThrottledRequest(method, url, data, config, key, throttleMs) {
+    const now = Date.now()
+    
+    const lastTime = this.lastRequestTime.get(key) || 0
+    const timeSinceLastRequest = now - lastTime
+    
+    if (timeSinceLastRequest < throttleMs) {
+      console.log(`🚫 ${method}请求被节流忽略`)
+      return Promise.reject(new ThrottledError('请求过于频繁，已被节流忽略'))
+    }
+    
+    this.lastRequestTime.set(key, now)
+    this._cancelPendingRequest(key, `新的${method}节流请求`)
+    
+    return this._executeRequest(method, url, data, config, key)
+  }
+  
+  /**
+   * 执行请求
+   */
+  async _executeRequest(method, url, data, config, key) {
     const cancelToken = axios.CancelToken.source()
     this.cancelTokens.set(key, cancelToken)
     this.pendingRequests.set(key, true)
@@ -132,11 +141,18 @@ class ApiClient {
         timeout: config.timeout || 10000
       }
       
-      const response = await this.instance.get(url, requestConfig)
+      let response
+      if (method === 'GET') {
+        response = await this.instance.get(url, requestConfig)
+      } else if (method === 'POST') {
+        response = await this.instance.post(url, data, requestConfig)
+      } else if (method === 'PUT') {
+        response = await this.instance.put(url, data, requestConfig)
+      } else {
+        throw new Error(`不支持的请求方法: ${method}`)
+      }
       
-      // 清理
       this._cleanupRequest(key)
-      
       return response
       
     } catch (error) {
@@ -152,7 +168,7 @@ class ApiClient {
   /**
    * 获取请求的唯一key（基于URL和参数）
    */
-  _getRequestKey(url, config) {
+  _getRequestKey(method, url, config, data = null) {
     // 只根据核心参数生成key，忽略不重要的配置
     const params = config.params || {}
     
@@ -164,7 +180,28 @@ class ApiClient {
         return acc
       }, {})
     
-    return `${url}:${JSON.stringify(sortedParams)}`
+    // 基础key
+    let key = `${method}:${url}:${JSON.stringify(sortedParams)}`
+    
+    // 对于POST/PUT请求，添加请求数据
+    if (data && (method === 'POST' || method === 'PUT')) {
+      try {
+        // 简单处理：如果数据是对象就转字符串，否则直接使用
+        const dataStr = typeof data === 'object' ? JSON.stringify(data) : String(data)
+        // 简单哈希避免key太长
+        let hash = 0
+        for (let i = 0; i < dataStr.length; i++) {
+          hash = ((hash << 5) - hash) + dataStr.charCodeAt(i)
+          hash = hash & hash
+        }
+        key += `:${Math.abs(hash).toString(36)}`
+      } catch (error) {
+        console.warn('处理请求数据失败:', error)
+        key += `:${String(data).slice(0, 50)}` // 限制长度
+      }
+    }
+    
+    return key
   }
   
   /**
