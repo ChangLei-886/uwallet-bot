@@ -318,7 +318,6 @@ const handleScroll = () => {
   }
 }
 
-
 // 修改后的 loadMore 函数
 async function loadMore() {
   if (loadingMore.value || !hasMore.value) return
@@ -492,23 +491,6 @@ onMounted(async () => {
   currentYear.value = now.getFullYear()
   await fetchBills() // 初始加载数据
 
-  // 确保容器高度足够
-  // nextTick(() => {
-  //   if (scrollContainer.value) {
-  //     // 确保容器有足够的高度才能滚动
-  //     const setContainerHeight = () => {
-  //       if (scrollContainer.value) {
-  //         const windowHeight = window.innerHeight
-  //         const containerRect = scrollContainer.value.getBoundingClientRect()
-  //         const containerTop = containerRect.top
-  //         scrollContainer.value.style.height = `${windowHeight - containerTop}px`
-  //       }
-  //     }
-      
-  //     setContainerHeight()
-  //     window.addEventListener('resize', setContainerHeight)
-  //   }
-  // })
   nextTick(() => {
     // 只检查容器是否存在，不修改其样式
     if (scrollContainer.value) {
@@ -522,8 +504,8 @@ onUnmounted(() => {
   if (window.fetchTimer) {
     clearTimeout(window.fetchTimer)
   }
-   // 删除之前可能添加的resize监听
-  window.removeEventListener('resize', setContainerHeight)
+  //  // 删除之前可能添加的resize监听
+  // window.removeEventListener('resize', setContainerHeight)
 })
 
 // 方法：格式化金额范围显示

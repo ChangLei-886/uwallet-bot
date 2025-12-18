@@ -76,6 +76,7 @@
             type="number"
             placeholder="0.00"
             class="amount-input"
+            @input="handleAmountInput"
           />
           <button class="max-button" @click="setMaxAmount">最大</button>
         </div>
@@ -118,24 +119,130 @@
         </button>
       </div>
     </section>
+
+    <!-- 引入验证密码弹窗 -->
+    <WithdrawPassVerifyDlg
+      v-model:visible="showPasswordDialog"
+      ref="passwordDialogRef"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import apiClient from '../api/client'
+import { useRouter } from 'vue-router'
+import WithdrawPassVerifyDlg from './WithdrawPassVerifyDlg.vue'
+import CryptoJS from 'crypto-js'
 
 // 响应式数据
-const withdrawAddress = ref('TTJkAoq2zceVem1y8Z9ojG4Eb5dGBAVSTX')
+const withdrawAddress = ref('')
 const withdrawAmount = ref('')
-const availableBalance = ref('1000.00') // 示例余额，实际应从API获取
-const feeRate = 0.001 // 手续费率 0.1%
+const availableBalance = ref('0.00')
+const feeRate = 0.01 // 手续费率 0.1%
+let password = ref('')
 
-const handleWithdraw = () => {
-  // 直接使用全局的 $toast
-  window.$toast('提现成功')
+const router = useRouter()
+
+// 控制弹窗显示
+const showPasswordDialog = ref(false)
+const passwordDialogRef = ref(null)
+
+// 处理输入
+const handleAmountInput = () => {
+  const amount = parseFloat(withdrawAmount.value) || 0
+  const balance = parseFloat(availableBalance.value) || 0
   
-//   // 或者带时长
-//   window.$toast('提现申请已提交', 3000)
+  // 如果输入超过余额，直接替换为余额
+  if (amount > balance) {
+    withdrawAmount.value = balance.toFixed(2)
+  }
+}
+
+// 可用余额
+async function fetchAvailableBalance() {
+  try {
+    const response = await apiClient.throttledGet('/wallet-bot/me/balance')
+    availableBalance.value = response.data?.data?.balance || '0.00'
+  } catch (error) {
+    window.$toast(error.response?.data?.detail || '获取余额失败，请重试')
+  }
+}
+
+// 验证密码
+async function verifyPassword() {
+  try {
+    // 直接调用 API，拦截器会自动处理令牌
+    await apiClient.throttledPost('/wallet-bot/me/withdraw-password/verification', {
+        password: CryptoJS.MD5(password.value).toString()
+    })
+    return true
+  } catch (error) {
+    console.log('密码验证失败:', error)
+    window.$toast(error.response?.data?.detail || error.response?.data?.message || '操作失败，请重试')
+    return false
+  }
+}
+
+// 提现
+async function withdraw() {
+  try {
+    // 直接调用 API，拦截器会自动处理令牌
+    await apiClient.throttledPost('/wallet-bot/me/usdt-withdraw', {
+        address: withdrawAddress.value,
+        amount: withdrawAmount.value,
+        password: CryptoJS.MD5(password.value).toString()
+    })
+    // 直接使用全局的 $toast
+    window.$toast('提现成功')
+
+    // 提现成功后，重置表单
+    withdrawAddress.value = ''
+    withdrawAmount.value = ''
+
+    // 获取余额
+    fetchAvailableBalance()
+
+  } catch (error) {
+    console.log('密码验证失败:', error)
+    window.$toast(error.response?.data?.detail || error.response?.data?.message || '操作失败，请重试')
+  }
+}
+
+const handleWithdraw = async () => {
+  // 表单验证
+  if (!withdrawAddress.value.trim()) {
+    window.$toast('请输入提现地址')
+    return
+  }
+
+  if (!withdrawAmount.value || parseFloat(withdrawAmount.value) <= 0) {
+    window.$toast('请输入有效的提现金额')
+    return
+  }
+
+  const amount = parseFloat(withdrawAmount.value)
+  const available = parseFloat(availableBalance.value)
+  
+  if (amount > available) {
+    window.$toast('提现金额不能超过可用余额')
+    return
+  }
+
+  // 显示阻塞式弹窗，等待用户输入密码
+  password.value = await passwordDialogRef.value.open()
+  if(!password.value) {
+    return
+  }
+
+  // 验证密码
+  const isValid = await verifyPassword()
+  if (!isValid) {
+    return
+  }
+
+  // 提现
+  await withdraw()
 }
 
 // 计算手续费和总额
@@ -160,6 +267,32 @@ const handleScan = () => {
   // 扫码逻辑，这里留空，根据实际扫码功能实现
   console.log('打开扫码功能')
 }
+
+//用户信息
+async function getUserInfo(){
+    try {
+        // 直接调用 API，拦截器会自动处理令牌
+        const response = await apiClient.throttledGet('/wallet-bot/me')
+        return response.data?.data
+    } catch (error) {
+        // 错误提示
+        window.$toast(error.response?.data?.detail || '操作失败，请重试')
+    } 
+}
+
+onMounted(async () => {
+    // 先校验用户是否已经设置提现密码
+    const userInfo = await getUserInfo()
+    if (!userInfo?.is_withdraw_beset) {
+      // 未设置提现密码，跳转到设置页面
+      window.$toast('请先设置提现密码')
+      router.push('/withdraw-password?action=set')
+    }
+    
+    // 获取余额
+    fetchAvailableBalance()
+})
+
 </script>
 
 <style scoped>

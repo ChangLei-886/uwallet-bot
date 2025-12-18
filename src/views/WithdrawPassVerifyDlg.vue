@@ -1,6 +1,6 @@
 <template>
-  <!-- 弹窗遮罩层 -->
-  <div v-if="visible" class="dialog-overlay" @click.self="handleCancel">
+  <!-- 弹窗遮罩层 - 使用 v-show 而不是 v-if 保持组件实例 -->
+  <div v-show="visible" class="dialog-overlay" @click.self="handleCancel">
     <div class="dialog-container">
       <!-- 弹窗头部 -->
       <div class="dialog-header">
@@ -15,15 +15,19 @@
       
       <!-- 弹窗内容 -->
       <div class="dialog-content">
-        <!-- 金额显示 -->
-        <div class="amount-display" v-if="amount">
-          <div class="amount-label">提现金额</div>
-          <div class="amount-value">{{ amount }} USDT</div>
-        </div>
-        
-        <!-- 密码输入 -->
+        <!-- 密码输入区域 -->
         <div class="password-input-section">
-          <label class="input-label">提现密码</label>
+          <div class="password-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="10" width="18" height="12" rx="2" stroke="var(--tg-accent)" stroke-width="1.2"/>
+              <path d="M7 10V6C7 3.79086 8.79086 2 11 2H13C15.2091 2 17 3.79086 17 6V10" stroke="var(--tg-accent)" stroke-width="1.2"/>
+              <circle cx="12" cy="14" r="2" fill="var(--tg-accent)"/>
+              <path d="M12 12V16" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="password-title">请输入提现密码</div>
+          <div class="password-subtitle">请确认您的提现操作</div>
+          
           <div class="password-input-container">
             <input
               ref="passwordInput"
@@ -32,14 +36,19 @@
               placeholder="请输入6位数字密码"
               class="password-input"
               maxlength="6"
-              inputmode="numeric"  <!-- 移动端会弹出数字键盘 -->
+              inputmode="numeric"
               pattern="[0-9]*"
               @keyup.enter="handleConfirm"
             />
           </div>
           <div class="input-hint" :class="{ 'error': error }">
-            {{ error || '请输入6位数字密码' }}
+            {{ error || '为保障您的资金安全，请验证提现密码' }}
           </div>
+          
+          <!-- 忘记密码链接 -->
+          <a href="/wallet-bot/me/withdraw-password?action=reset" class="forgot-password">
+            忘记提现密码？
+          </a>
         </div>
       </div>
       
@@ -47,7 +56,7 @@
       <div class="dialog-footer">
         <button class="btn btn-cancel" @click="handleCancel">取消</button>
         <button class="btn btn-confirm" @click="handleConfirm" :disabled="!isValid">
-          确认
+          确认提现
         </button>
       </div>
     </div>
@@ -55,27 +64,27 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, defineExpose } from 'vue'
 
 // Props
 const props = defineProps({
   visible: {
     type: Boolean,
     default: false
-  },
-  amount: {
-    type: [String, Number],
-    default: ''
   }
 })
 
 // Emits
-const emit = defineEmits(['update:visible', 'confirm', 'cancel'])
+const emit = defineEmits(['update:visible'])
 
 // 响应式数据
 const password = ref('')
 const error = ref('')
 const passwordInput = ref(null)
+
+// Promise 相关的响应式数据
+const resolvePromise = ref(null)
+const rejectPromise = ref(null)
 
 // 计算属性
 const isValid = computed(() => {
@@ -98,6 +107,25 @@ watch(() => props.visible, (newVal) => {
   }
 })
 
+// 打开弹窗的方法（返回 Promise）
+const open = () => {
+  return new Promise((resolve, reject) => {
+    // 存储 resolve 和 reject
+    resolvePromise.value = resolve
+    rejectPromise.value = reject
+    
+    // 显示弹窗
+    emit('update:visible', true)
+    
+    // 聚焦输入框
+    nextTick(() => {
+      if (passwordInput.value) {
+        passwordInput.value.focus()
+      }
+    })
+  })
+}
+
 // 确认验证
 const handleConfirm = async () => {
   if (!isValid.value) {
@@ -106,14 +134,17 @@ const handleConfirm = async () => {
   }
   
   try {
-    // 这里可以调用API验证密码
-    // const response = await apiClient.post('/verify-withdraw-password', {
-    //   password: password.value,
-    //   amount: props.amount
-    // })
+    // 如果有错误信息先清空
+    error.value = ''
     
-    // 验证成功，传递密码给父组件
-    emit('confirm', password.value)
+    // 解析Promise，返回密码
+    if (resolvePromise.value) {
+      resolvePromise.value(password.value)
+      resolvePromise.value = null
+      rejectPromise.value = null
+    }
+    
+    // 关闭弹窗
     closeDialog()
     
   } catch (err) {
@@ -132,7 +163,14 @@ const handleConfirm = async () => {
 
 // 取消
 const handleCancel = () => {
-  emit('cancel')
+  // 拒绝Promise，返回取消信息
+  if (rejectPromise.value) {
+    rejectPromise.value(new Error('用户取消了提现操作'))
+    resolvePromise.value = null
+    rejectPromise.value = null
+  }
+  
+  // 关闭弹窗
   closeDialog()
 }
 
@@ -140,6 +178,11 @@ const handleCancel = () => {
 const closeDialog = () => {
   emit('update:visible', false)
 }
+
+// 暴露 open 方法给父组件
+defineExpose({
+  open
+})
 </script>
 
 <style scoped>
@@ -222,45 +265,36 @@ const closeDialog = () => {
 
 /* 弹窗内容 */
 .dialog-content {
-  padding: 24px;
-}
-
-/* 金额显示 */
-.amount-display {
-  text-align: center;
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-}
-
-.amount-label {
-  font-size: 13px;
-  color: var(--tg-text-secondary);
-  margin-bottom: 6px;
-}
-
-.amount-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--tg-text);
+  padding: 32px 24px 24px;
 }
 
 /* 密码输入区域 */
 .password-input-section {
+  text-align: center;
   margin-bottom: 8px;
 }
 
-.input-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
+.password-icon {
+  margin-bottom: 16px;
+  color: var(--tg-accent);
+}
+
+.password-title {
+  font-size: 17px;
+  font-weight: 600;
   color: var(--tg-text);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+.password-subtitle {
+  font-size: 14px;
+  color: var(--tg-text-secondary);
+  margin-bottom: 24px;
 }
 
 .password-input-container {
   position: relative;
+  margin-bottom: 8px;
 }
 
 .password-input {
@@ -292,14 +326,31 @@ const closeDialog = () => {
 
 /* 输入提示 */
 .input-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--tg-text-secondary);
   margin-top: 8px;
-  min-height: 16px;
+  min-height: 20px;
+  line-height: 1.4;
 }
 
 .input-hint.error {
   color: #ef4444;
+}
+
+/* 忘记密码链接 */
+.forgot-password {
+  display: block;
+  font-size: 14px;
+  color: var(--tg-accent);
+  text-decoration: none;
+  margin-top: 16px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.forgot-password:hover {
+  background: rgba(64, 158, 255, 0.1);
 }
 
 /* 弹窗底部 */
@@ -365,11 +416,19 @@ const closeDialog = () => {
   }
   
   .dialog-content {
-    padding: 20px;
+    padding: 24px 20px 20px;
   }
   
-  .amount-value {
-    font-size: 22px;
+  .password-icon {
+    margin-bottom: 12px;
+  }
+  
+  .password-title {
+    font-size: 16px;
+  }
+  
+  .password-subtitle {
+    font-size: 13px;
   }
   
   .password-input {

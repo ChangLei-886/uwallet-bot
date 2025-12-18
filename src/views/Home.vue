@@ -193,18 +193,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import apiClient from '../api/client'
 
-const balance = ref('1000.00')
+const balance = ref('0.00')
 const masked = ref(false)
 const expanded = ref(false)
 
 const userId = ref('')
 const address = ref('')
 const userName = ref('')
-let userInfo = ref(null)
-const loading = ref(false)
+
+const userApi = '/wallet-bot/me'
+const userBalanceApi = '/wallet-bot/me/balance'
+
 
 function toggleMask() {
   masked.value = !masked.value
@@ -221,7 +223,6 @@ function copyAddress() {
   }
 }
 
-const avatarInitials = () => (address.value ? address.value.slice(0,2) : 'HW')
 const shortAddress = () => (address.value ? `${address.value.slice(0,8)}...${address.value.slice(-6)}` : '')
 
 function toggleAddressExpand() {
@@ -236,7 +237,6 @@ function setCopySuccess() {
 }
 
 const userCopySuccess = ref(false)
-
 function setUserCopySuccess() {
   userCopySuccess.value = true
   setTimeout(() => (userCopySuccess.value = false), 1200)
@@ -252,60 +252,39 @@ function copyUserId() {
   }
 }
 
+// 加载用户信息
 async function loadUserInfo() {
-  loading.value = true
-  try {
     // 直接调用 API，拦截器会自动处理令牌
-    const response = await apiClient.throttledGet('/wallet-bot/me')
-    userInfo.value = response.data.data
-  } catch (error) {
-    console.error('获取用户信息失败:', error)
-  } finally {
-    loading.value = false
-  }
+    const response = await apiClient.throttledGet(userApi)
+    const userInfo = response.data.data
+
+    userId.value = userInfo.uuid || '用户ID'
+    userName.value = userInfo.name || '用户名称'
+    address.value = userInfo.account?.address || 'TNPqLpM1Y3wGjqM4K5n6b7c8d9e0f1g2h3i4j5k'
 }
 
+// 加载用户余额
 async function loadBalance() {
-  try {
-    const response = await apiClient.throttledGet('/wallet-bot/me/balance')
-    balance.value = response.data.data.balance.toFixed(2)
-  } catch (error) {
-    console.error('获取余额失败:', error)
-  }
+    const response = await apiClient.throttledGet(userBalanceApi)
+    balance.value = response.data.data.balance
 }
-
 
 onMounted(async () => {
-  // try to read Telegram initDataUnsafe for user photo (no validation here)
-
   try {
     const urlParams = new URLSearchParams(window.location.search)
-    let userUUid = localStorage.getItem('user_uuid')
-    console.log('📋 URL 中的 user_uuid:', userUUid)
-
-    if(!userUUid){
-        // 检查是否已有存储的 UUID
-        userUUid = urlParams.get('user_uuid')
-    }
-
+    const userUUid = localStorage.getItem('user_uuid') || urlParams.get('user_uuid')
     if(!userUUid){
         console.warn('⚠️ 未找到 user_uuid')
         errorMessage.value = '未找到用户标识'
         return
-    } else {
-        // 存储 UUID 以备后用
-        localStorage.setItem('user_uuid', userUUid);
     }
+    // 存储到本地存储以备后续使用
+    localStorage.setItem('user_uuid', userUUid);
 
-    // 1. 获取用户信息
+    // 加载用户信息
     await loadUserInfo()
-    if (userInfo.value) {
-      userId.value = userInfo.value.uuid || '用户ID'
-      userName.value = userInfo.value.name || '用户名称'
-      address.value = userInfo.value.account?.address || 'TNPqLpM1Y3wGjqM4K5n6b7c8d9e0f1g2h3i4j5k'
-    }
 
-    //2. 获取余额信息
+    // 加载余额信息
     await loadBalance()
 
   } catch (e) {
@@ -313,6 +292,7 @@ onMounted(async () => {
     console.warn('获取Telegram用户信息失败:', e);
   }
 })
+
 </script>
 
 <style scoped>

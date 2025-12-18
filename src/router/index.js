@@ -7,7 +7,8 @@ import Bill from '../views/Bill.vue'
 import WithdrawPassword from '../views/WithdrawPassword.vue'
 
 const routes = [
-  { path: '/home', name: 'Home', component: Home},
+  { path: '/', name: 'Home', component: Home},
+  { path: '/home', redirect: '/'},
   { path: '/recharge', name: 'Recharge', component: Recharge },
   { path: '/bill', name: 'Bill', component: Bill },
   { path: '/withdraw', name: 'Withdraw', component: Withdraw },

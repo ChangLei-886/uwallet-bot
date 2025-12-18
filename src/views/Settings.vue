@@ -11,7 +11,7 @@
       <!-- 设置项列表 -->
       <div class="settings-list">
         <!-- 提现密码 -->
-        <router-link to="/settings/withdraw-password" class="settings-item">
+        <router-link :to="`/withdraw-password?action=${action}`" class="settings-item">
           <div class="item-left">
             <div class="item-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -31,99 +31,27 @@
             </svg>
           </div>
         </router-link>
-        
-        <!-- 提现地址管理 -->
-        <router-link to="/settings/addresses" class="settings-item">
-          <div class="item-left">
-            <div class="item-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 21C15.5 17.4 19 14.176 19 10.2C19 6.224 15.866 3 12 3C8.13401 3 5 6.224 5 10.2C5 14.176 8.5 17.4 12 21Z" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="currentColor" stroke-width="1.2"/>
-              </svg>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">提现地址管理</h3>
-              <p class="item-desc">管理您的提现地址</p>
-            </div>
-          </div>
-          <div class="item-right">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </router-link>
-        
-        <!-- 支付密码 -->
-        <router-link to="/settings/payment-password" class="settings-item">
-          <div class="item-left">
-            <div class="item-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M2 10H22" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                <circle cx="18" cy="15" r="1" fill="currentColor"/>
-              </svg>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">支付密码</h3>
-              <p class="item-desc">设置或修改支付密码</p>
-            </div>
-          </div>
-          <div class="item-right">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </router-link>
-        
-        <!-- 安全中心 -->
-        <router-link to="/settings/security" class="settings-item">
-          <div class="item-left">
-            <div class="item-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">安全中心</h3>
-              <p class="item-desc">查看账户安全状态</p>
-            </div>
-          </div>
-          <div class="item-right">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </router-link>
-        
-        <!-- 关于我们 -->
-        <router-link to="/settings/about" class="settings-item">
-          <div class="item-left">
-            <div class="item-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M12 8V12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                <circle cx="12" cy="16" r="1" fill="currentColor"/>
-              </svg>
-            </div>
-            <div class="item-content">
-              <h3 class="item-title">关于我们</h3>
-              <p class="item-desc">版本信息与帮助</p>
-            </div>
-          </div>
-          <div class="item-right">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-        </router-link>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-// 这个页面只是菜单列表，不需要复杂逻辑
+import { onMounted, ref } from 'vue'
+import apiClient from '../api/client'
+
+// 默认 action 为 'set'
+const action = ref('set')
+
+// 页面加载时检查
+onMounted(async () => {
+  try {
+    const response = await apiClient.throttledGet('/wallet-bot/me')
+    action.value = response.data?.data?.is_withdraw_beset ? 'modify' : 'set'
+  } catch {
+    action.value = 'set' // 失败也默认 set
+  }
+})
 </script>
 
 <style scoped>

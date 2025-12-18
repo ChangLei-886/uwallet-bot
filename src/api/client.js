@@ -67,7 +67,8 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest)
       }
     }
-
+    // 弹出错误信息
+    window.$toast(error.response?.data?.detail || error.response?.data?.message || '操作失败，请重试')
     return Promise.reject(error)
   }
 )

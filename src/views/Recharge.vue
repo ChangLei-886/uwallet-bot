@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import apiClient from '../api/client'
 
 // 响应式数据
@@ -188,6 +188,7 @@ onMounted(() => {
   loadUserInfo()
   fetchQRCode()
 })
+
 </script>
 
 <style scoped>

@@ -182,6 +182,7 @@ const handleSubmit = async () => {
     confirmPassword.value = ''
     
     if (isSetting.value) {
+      console.log('Password set successfully')
       // 设置成功后返回上一页
       router.back()
     }
