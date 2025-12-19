@@ -28,6 +28,11 @@ router.afterEach((to, from) => {
       
       // 定义首页（隐藏 BackButton）
       const homePages = ['/', '/home']
+      // 从bot进来的链接不处理
+      if(to.query.entry && to.query.entry === 'bot'){
+        tg.expand?.()
+        return
+      }
       
       if (showBackPages.includes(to.path)) {
         // 显示 BackButton

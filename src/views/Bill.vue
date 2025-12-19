@@ -487,25 +487,31 @@ watch([activeType, () => amountRange.min, () => amountRange.max, dateFilter], ()
 
 // 修改初始化
 onMounted(async () => {
-  const now = new Date()
-  currentYear.value = now.getFullYear()
-  await fetchBills() // 初始加载数据
-
-  nextTick(() => {
-    // 只检查容器是否存在，不修改其样式
-    if (scrollContainer.value) {
-      console.log('滚动容器已挂载，高度:', scrollContainer.value.clientHeight)
+    const urlParams = new URLSearchParams(window.location.search)
+    const userUUid = localStorage.getItem('user_uuid') || urlParams.get('user_uuid')
+    if(!userUUid){
+        console.warn('⚠️ 未找到 user_uuid')
+        errorMessage.value = '未找到用户标识'
+        return
     }
-  })
+
+    const now = new Date()
+    currentYear.value = now.getFullYear()
+    await fetchBills() // 初始加载数据
+
+    nextTick(() => {
+      // 只检查容器是否存在，不修改其样式
+      if (scrollContainer.value) {
+        console.log('滚动容器已挂载，高度:', scrollContainer.value.clientHeight)
+      }
+    })
 })
 
 // 组件卸载时清理
 onUnmounted(() => {
-  if (window.fetchTimer) {
-    clearTimeout(window.fetchTimer)
-  }
-  //  // 删除之前可能添加的resize监听
-  // window.removeEventListener('resize', setContainerHeight)
+    if (window.fetchTimer) {
+      clearTimeout(window.fetchTimer)
+    }
 })
 
 // 方法：格式化金额范围显示

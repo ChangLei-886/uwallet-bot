@@ -46,6 +46,14 @@ const action = ref('set')
 // 页面加载时检查
 onMounted(async () => {
   try {
+    const urlParams = new URLSearchParams(window.location.search)
+    const userUUid = localStorage.getItem('user_uuid') || urlParams.get('user_uuid')
+    if(!userUUid){
+        console.warn('⚠️ 未找到 user_uuid')
+        errorMessage.value = '未找到用户标识'
+        return
+    }
+
     const response = await apiClient.throttledGet('/wallet-bot/me')
     action.value = response.data?.data?.is_withdraw_beset ? 'modify' : 'set'
   } catch {

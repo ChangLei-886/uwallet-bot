@@ -281,6 +281,14 @@ async function getUserInfo(){
 }
 
 onMounted(async () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const userUUid = localStorage.getItem('user_uuid') || urlParams.get('user_uuid')
+    if(!userUUid){
+        console.warn('⚠️ 未找到 user_uuid')
+        errorMessage.value = '未找到用户标识'
+        return
+    }
+
     // 先校验用户是否已经设置提现密码
     const userInfo = await getUserInfo()
     if (!userInfo?.is_withdraw_beset) {
